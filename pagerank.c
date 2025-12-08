@@ -50,6 +50,21 @@ void fill_arr_parallel(float* arr, size_t arr_len, float value, size_t cores_num
     }
 }
 
+void perform_iteration(Graph* graph, float* new_pageranks, float* old_pageranks, size_t* outlinks)
+{
+    const size_t N = graph->numVertices;
+
+    for (size_t i = 0; i < N; ++i)
+    {
+        node* out_link = graph->adjacencyLists[i];
+        while (out_link != NULL)
+        {
+            new_pageranks[out_link->v] = old_pageranks[out_link->v] + old_pageranks[i] / outlinks[i];
+            out_link = out_link->next;
+        }
+    }
+}
+
 void PageRank(Graph *graph, int n, float* ranks)
 {
     const size_t cores_num  = sysconf(_SC_NPROCESSORS_ONLN);
@@ -57,12 +72,12 @@ void PageRank(Graph *graph, int n, float* ranks)
 
     fill_arr_parallel(ranks, N, 1.0/N, cores_num);
 
-    printf("[");
-    for (size_t i = 0; i < N; ++i)
-    {
-        printf("%f, ", ranks[i]);
-    }
-    printf("]\n");
+    /*
+     * 1. Compute outlinks
+     * 2. Parallelise perform_iteration
+     * 3. Call perform_iteration n times
+     *
+     */
 }
 
 // #endif /* _PAGE_RANK_IMPLEMENTATION */
