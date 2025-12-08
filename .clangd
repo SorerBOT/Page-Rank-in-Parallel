@@ -1,0 +1,6 @@
+CompileFlags:
+  Add: 
+    - -D_PR_SAFE_ALLOC
+    - -D_PR_PRINT
+    - -Iexternal
+    - -Iinclude
