@@ -1,4 +1,5 @@
 #include "pagerank.h"
+#include "graph.h"
 #include <stdlib.h>
 
 // #ifdef _PAGE_RANK_IMPLEMENTATION
@@ -159,7 +160,7 @@ void fill_arr_parallel(float* arr, size_t arr_len, float value, size_t cores_num
 }
 
 void update_all_linked_pages(vertex v, node* outlinks_root, size_t outlinks_num,
-        float old_pagerank, float* new_pageranks, float* old_pageranks,
+        float old_pagerank, float* new_pageranks,
         float* page_rank_sum_no_outlinks_ptr)
 {
     if (outlinks_root == NULL)
@@ -170,7 +171,7 @@ void update_all_linked_pages(vertex v, node* outlinks_root, size_t outlinks_num,
     {
         while (outlinks_root != NULL)
         {
-            new_pageranks[outlinks_root->v] += PR_DAMPING_FACTOR * (old_pageranks[outlinks_root->v] + old_pagerank / outlinks_num);
+            new_pageranks[outlinks_root->v] += PR_DAMPING_FACTOR * (old_pagerank / outlinks_num);
             do 
             {
                 outlinks_root = outlinks_root->next;
@@ -186,7 +187,8 @@ void perform_iteration(Graph* graph, float* new_pageranks, float* old_pageranks,
     float page_rank_sum_no_outlinks = 0.f;
     for (size_t i = 0; i < N; ++i)
     {
-        update_all_linked_pages((int)i, graph->adjacencyLists[i], outlinks[i], old_pageranks[i], &new_pageranks[i], old_pageranks, &page_rank_sum_no_outlinks);
+        update_all_linked_pages((vertex)i, graph->adjacencyLists[i], outlinks[i], old_pageranks[i], &new_pageranks[i], &page_rank_sum_no_outlinks);
+        new_pageranks[i] += (1-PR_DAMPING_FACTOR)/N;
     }
     for (size_t i = 0; i < N; ++i)
     {

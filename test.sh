@@ -1,2 +1,2 @@
 make
-./bin/main 3 2 < ./tests/test3.txt
+./bin/main 3 100 < ./tests/test3.txt

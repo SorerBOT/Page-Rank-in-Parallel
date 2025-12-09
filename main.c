@@ -27,9 +27,11 @@ void PageRankSequential(Graph *graph, int iterations, float* ranks) {
     
     //outlinks calculations
     
-    for(int i = 0; i < N; i++) {
+    for (int i = 0; i < N; i++)
+    {
         node* v = graph->adjacencyLists[i];
-        while (v!=NULL) {
+        while (v != NULL)
+        {
             outlinkes[i]++;
             v = v->next;
         }
@@ -51,14 +53,17 @@ void PageRankSequential(Graph *graph, int iterations, float* ranks) {
                     v = v->next;
                 }
             }
-            
+
             //calculate i rank
             double sumA = 0.0;
             double sumB = 0.0;
-            for(int j = 0 ; j < N; j++) {
-                if(out2i[j] == 1) {
+            for (int j = 0 ; j < N; j++)
+            {
+                if(out2i[j] == 1)
+                {
                     sumA += ranks[j]/outlinkes[j];
-                } else if(outlinkes[j] == 0) {
+                } else if(outlinkes[j] == 0)
+                {
                     sumB += ranks[j]/N;
                 }
             }
