@@ -158,7 +158,7 @@ void fill_arr_parallel(float* arr, size_t arr_len, float value, size_t cores_num
     }
 }
 
-void update_all_pagaes(node* outlinks_root, size_t outlinks_num,
+void update_all_linked_pages(vertex v, node* outlinks_root, size_t outlinks_num,
         float old_pagerank, float* new_pageranks, float* old_pageranks,
         float* page_rank_sum_no_outlinks_ptr)
 {
@@ -171,7 +171,11 @@ void update_all_pagaes(node* outlinks_root, size_t outlinks_num,
         while (outlinks_root != NULL)
         {
             new_pageranks[outlinks_root->v] += PR_DAMPING_FACTOR * (old_pageranks[outlinks_root->v] + old_pagerank / outlinks_num);
-            outlinks_root = outlinks_root->next;
+            do 
+            {
+                outlinks_root = outlinks_root->next;
+            }
+            while (outlinks_root != NULL && outlinks_root->v == v);
         }
     }
 }
@@ -179,9 +183,10 @@ void update_all_pagaes(node* outlinks_root, size_t outlinks_num,
 void perform_iteration(Graph* graph, float* new_pageranks, float* old_pageranks, size_t* outlinks)
 {
     const size_t N = graph->numVertices;
-    float page_rank_sum_no_outlinks = 0;
+    float page_rank_sum_no_outlinks = 0.f;
     for (size_t i = 0; i < N; ++i)
     {
+        update_all_linked_pages((int)i, graph->adjacencyLists[i], outlinks[i], old_pageranks[i], &new_pageranks[i], old_pageranks, &page_rank_sum_no_outlinks);
     }
     for (size_t i = 0; i < N; ++i)
     {
@@ -221,11 +226,12 @@ void PageRank(Graph *graph, int n, float* ranks)
     }
 
     float* new_ranks = PR_MALLOC(N * sizeof(float));
-    float* ptr_temp;
+    float* ptr_temp = NULL;
     for (size_t i = 0; i < n; ++i)
     {
         fill_arr_parallel(new_ranks, N, 0.f, cores_num);
         perform_iteration(graph, new_ranks, ranks, outlinks);
+
         ptr_temp = new_ranks;
         new_ranks = ranks;
         ranks = ptr_temp;
@@ -233,7 +239,11 @@ void PageRank(Graph *graph, int n, float* ranks)
 
     if (n % 2 == 1)
     {
-        copy_arr_parallel(new_ranks, ranks, N, cores_num);
+        copy_arr_parallel(ranks, new_ranks, N, cores_num);
+    }
+    for (size_t j = 0; j < N; ++j)
+    {
+        printf("Element %lu in ranks is: %.2f\n", j, ranks[j]);
     }
 
     free(new_ranks);

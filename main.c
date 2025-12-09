@@ -6,10 +6,71 @@
 #define _PR_SAFE_ALLOC 1
 #include "pagerank.h"
 
+#define D 0.15
 static void usage(const char *prog) {
     fprintf(stderr,
             "Usage: %s <num_vertices> <num_iterations> < input_edges.txt\n",
             prog);
+}
+
+void initializeRanks(float *ranks, int N) {
+    for (int i = 0; i < N; i++) {
+        ranks[i] = 1.0 / N;
+    }
+}
+void PageRankSequential(Graph *graph, int iterations, float* ranks) {
+    int N = graph->numVertices;
+    float *newRanks = (float *)malloc(N * sizeof(float));
+    int* outlinkes = (int*)malloc(N* sizeof(int));
+
+    initializeRanks(ranks, N);
+    
+    //outlinks calculations
+    
+    for(int i = 0; i < N; i++) {
+        node* v = graph->adjacencyLists[i];
+        while (v!=NULL) {
+            outlinkes[i]++;
+            v = v->next;
+        }
+    }
+    
+    for (int iter = 0; iter < iterations; iter++) {
+        //calculate nodes with outlinks to i
+        for (int i = 0; i < N; i++) {
+            vertex* out2i = (vertex*)malloc(N * sizeof(vertex));
+            
+            for(int j = 0; j < N; j++) {
+                if( j == i) continue;
+                node* v = graph->adjacencyLists[j];
+                while (v != NULL) {
+                    if (v->v == i) {
+                        out2i[j] = 1;
+                        break;
+                    }
+                    v = v->next;
+                }
+            }
+            
+            //calculate i rank
+            double sumA = 0.0;
+            double sumB = 0.0;
+            for(int j = 0 ; j < N; j++) {
+                if(out2i[j] == 1) {
+                    sumA += ranks[j]/outlinkes[j];
+                } else if(outlinkes[j] == 0) {
+                    sumB += ranks[j]/N;
+                }
+            }
+            newRanks[i] = D/N +(1-D)*(sumA+sumB);
+        }
+
+        for (int i = 0; i < N; i++) {
+            ranks[i] = newRanks[i];
+        }
+    }
+
+    free(newRanks);
 }
 
 int main(int argc, char **argv) {
@@ -54,17 +115,23 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Failed to allocate rank array\n");
         return 1;
     }
+    float *rank_sequential = (float *)malloc(sizeof(float) * n_vertices);
+    if (!rank_sequential) {
+        fprintf(stderr, "Failed to allocate rank array\n");
+        return 1;
+    }
 
     PageRank(g, (int)n_iters, rank);
+    PageRankSequential(g, (int)n_iters, rank_sequential);
 
     // Print final ranks, one per line: "vertex rank"
-    double sum = 0.0;
+    double sum = 0.f, sum_sequential = 0.f;
     for (int i = 0; i < n_vertices; i++) {
-    printf("%d %.6f\n", i, rank[i]);
-    sum += rank[i];
+        printf("%d %.6f-%.6f=%.6f\n", i, rank[i], rank_sequential[i], rank[i] - rank_sequential[i]);
+        sum += rank[i];
+        sum_sequential += rank_sequential[i];
     }
-    fprintf(stderr, "Sum of ranks = %.6f\n", sum);
-
+    fprintf(stderr, "Sum of ranks = %.6f, sum sequential = %.6f, diff = %.6f\n", sum, sum_sequential, sum - sum_sequential);
 
     free(rank);
     // We skip freeing the graph (simple test driver); OS will reclaim it.
