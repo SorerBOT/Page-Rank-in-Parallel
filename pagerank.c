@@ -24,11 +24,11 @@ void* outlinks_count(void* _args)
 {
     outlinks_count_args* args = _args;
     size_t outlinks = 0;
-
-    while (args->root_node != NULL)
+    node* node_current = args->root_node;
+    while (node_current != NULL)
     {
         ++outlinks;
-        args->root_node = args->root_node->next;
+        node_current = node_current->next;
     }
     *args->update_ptr = outlinks;
     return NULL;

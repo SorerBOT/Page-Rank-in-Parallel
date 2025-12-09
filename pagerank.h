@@ -11,6 +11,10 @@
 #include "graph.h"
 #include "thr_pool.h"
 
+#ifndef PR_DAMPING_FACTOR
+#define PR_DAMPING_FACTOR 0.85
+#endif
+
 /* I could only submit the header file, this should typically come before the include */
 #ifndef _PR_SAFE_ALLOC
 #define _PR_SAFE_ALLOC 1
