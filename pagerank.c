@@ -114,29 +114,34 @@ void fill_arr_parallel(float* arr, size_t arr_len, float value, size_t cores_num
     }
 }
 
+void update_all_pagaes(node* outlinks_root, size_t outlinks_num,
+        float old_pagerank, float* new_pageranks, float* old_pageranks,
+        float* page_rank_sum_no_outlinks_ptr)
+{
+    if (outlinks_root == NULL)
+    {
+        *page_rank_sum_no_outlinks_ptr += old_pagerank;
+    }
+    else
+    {
+        while (outlinks_root != NULL)
+        {
+            new_pageranks[outlinks_root->v] += PR_DAMPING_FACTOR * (old_pageranks[outlinks_root->v] + old_pagerank / outlinks_num);
+            outlinks_root = outlinks_root->next;
+        }
+    }
+}
+
 void perform_iteration(Graph* graph, float* new_pageranks, float* old_pageranks, size_t* outlinks)
 {
     const size_t N = graph->numVertices;
     float page_rank_sum_no_outlinks = 0;
     for (size_t i = 0; i < N; ++i)
     {
-        node* outlink = graph->adjacencyLists[i];
-        if (outlink == NULL)
-        {
-            page_rank_sum_no_outlinks += old_pageranks[i] / N;
-        }
-        else
-        {
-            while (outlink != NULL)
-            {
-                new_pageranks[outlink->v] += PR_DAMPING_FACTOR * (old_pageranks[outlink->v] + old_pageranks[i] / outlinks[i]);
-                outlink = outlink->next;
-            }
-        }
     }
     for (size_t i = 0; i < N; ++i)
     {
-        new_pageranks[i] += PR_DAMPING_FACTOR * (page_rank_sum_no_outlinks);
+        new_pageranks[i] += PR_DAMPING_FACTOR * (page_rank_sum_no_outlinks) / N;
     }
 
 }
