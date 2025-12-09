@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Page Rank",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/main",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "lldb",
+      "externalConsole": false,
+      "args": ["3", "2"],
+      "preLaunchTask": "make",
+      "stopAtEntry": true,
+      "setupCommands": [
+          { "text": "settings set target.input-path ${workspaceFolder}/tests/test3.txt" }
+      ]
+    }
+  ]
+}
