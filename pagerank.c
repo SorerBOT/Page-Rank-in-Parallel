@@ -49,6 +49,7 @@ void copy_arr_parallel(float* src, float* dest, size_t arr_len, long cores_num)
     {
         pthread_join(t_ids[i], NULL);
     }
+    free(t_ids);
 }
 
 typedef struct
@@ -84,6 +85,8 @@ void* outlinks_count(void* _args)
         }
         args->outlinks[i] = outlinks;
     }
+
+    free(args);
     return NULL;
 }
 void compute_outlinks_parallel(Graph* graph, size_t* node_outlinks, size_t node_num, long cores_num)
@@ -158,6 +161,7 @@ void add_arr_parallel(float* arr, size_t arr_len, float value, size_t cores_num)
     {
         pthread_join(t_ids[i], NULL);
     }
+    free(t_ids);
 }
 typedef struct
 {
@@ -204,6 +208,7 @@ void fill_arr_parallel(float* arr, size_t arr_len, float value, size_t cores_num
     {
         pthread_join(t_ids[i], NULL);
     }
+    free(t_ids);
 }
 
 typedef struct {
@@ -312,11 +317,6 @@ void PageRank(Graph *graph, int n, float* ranks)
     size_t* outlinks  = PR_MALLOC(N * sizeof(size_t));
     compute_outlinks_parallel(graph, outlinks, N, cores_num);
 
-    for (size_t i = 0; i < N; ++i)
-    {
-        printf("Node %lu has %lu outlinks\n", i, outlinks[i]);
-    }
-
     float* new_ranks = PR_MALLOC(N * sizeof(float));
     float* ptr_temp = NULL;
     thr_pool_t* pool = thr_pool_create(cores_num, cores_num, 0, NULL);
@@ -335,7 +335,6 @@ void PageRank(Graph *graph, int n, float* ranks)
         {
             sum_ranks += ranks[j];
         }
-        printf("%lu: sum %.6f\n", i, sum_ranks);
         fill_arr_parallel(new_ranks, N, 0.f, cores_num);
         perform_iteration(pool, graph, new_ranks, ranks, outlinks, cores_num);
 
@@ -348,10 +347,6 @@ void PageRank(Graph *graph, int n, float* ranks)
     if (n % 2 == 1)
     {
         copy_arr_parallel(ranks, new_ranks, N, cores_num);
-    }
-    for (size_t j = 0; j < N; ++j)
-    {
-        printf("Element %lu in ranks is: %.2f\n", j, ranks[j]);
     }
 
     free(new_ranks);
