@@ -3,6 +3,51 @@
 
 // #ifdef _PAGE_RANK_IMPLEMENTATION
 
+typedef struct
+{
+    float* src;
+    float* dest;
+    size_t arr_len;
+} copy_arr_sequential_args;
+copy_arr_sequential_args* copy_arr_sequential_args_make(float* src, float* dest, size_t arr_len)
+{
+    copy_arr_sequential_args* args = PR_MALLOC(sizeof(copy_arr_sequential_args));
+    *args = (copy_arr_sequential_args)
+    {
+        .src = src,
+        .dest = dest,
+        .arr_len = arr_len
+    };
+    return args;
+}
+void* copy_arr_sequential(void* _args)
+{
+    copy_arr_sequential_args* args = _args;
+    for (size_t i = 0; i < args->arr_len; ++i)
+    {
+        args->src[i] = args->dest[i];
+    }
+    free(args);
+    return NULL;
+}
+void copy_arr_parallel(float* src, float* dest, size_t arr_len, long cores_num)
+{
+    pthread_t* t_ids = PR_MALLOC(cores_num * sizeof(pthread_t));
+    size_t chunk_size = arr_len / (cores_num-1);
+
+    for (size_t i = 0; i < cores_num-1; ++i)
+    {
+        pthread_create(&t_ids[i], NULL, copy_arr_sequential, copy_arr_sequential_args_make(src, dest, chunk_size));
+        src += chunk_size;
+        dest += chunk_size;
+    }
+    pthread_create(&t_ids[cores_num-1], NULL, copy_arr_sequential, copy_arr_sequential_args_make(src, dest, arr_len % (cores_num-1)));
+
+    for (size_t i = 0; i < cores_num; ++i)
+    {
+        pthread_join(t_ids[i], NULL);
+    }
+}
 
 typedef struct
 {
@@ -91,7 +136,6 @@ void* fill_arr_sequential(void* _args)
     {
         args->arr[i] = args->value;
     }
-
     free(args);
     return NULL;
 }
@@ -180,10 +224,16 @@ void PageRank(Graph *graph, int n, float* ranks)
     float* ptr_temp;
     for (size_t i = 0; i < n; ++i)
     {
+        fill_arr_parallel(new_ranks, N, 0.f, cores_num);
         perform_iteration(graph, new_ranks, ranks, outlinks);
         ptr_temp = new_ranks;
         new_ranks = ranks;
         ranks = ptr_temp;
+    }
+
+    if (n % 2 == 1)
+    {
+        copy_arr_parallel(new_ranks, ranks, N, cores_num);
     }
 
     free(new_ranks);

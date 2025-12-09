@@ -15,6 +15,9 @@
 #define PR_DAMPING_FACTOR 0.85
 #endif
 
+#ifndef PR_CACHE_LINE
+#define PR_CACHE_LINE 64
+#endif
 /* I could only submit the header file, this should typically come before the include */
 #ifndef _PR_SAFE_ALLOC
 #define _PR_SAFE_ALLOC 1
