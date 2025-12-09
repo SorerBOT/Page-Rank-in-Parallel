@@ -11,6 +11,11 @@
 #include "graph.h"
 #include "thr_pool.h"
 
+/* I could only submit the header file, this should typically come before the include */
+#ifndef _PR_SAFE_ALLOC
+#define _PR_SAFE_ALLOC 1
+#endif
+
 #ifndef PR_MALLOC
 #ifdef _PR_SAFE_ALLOC
 #define PR_MALLOC(size) nn_malloc_debug((size), __FILE__, __LINE__)
@@ -18,7 +23,6 @@
 #define PR_MALLOC malloc
 #endif
 #endif
-
 
 #ifdef _PR_SAFE_ALLOC
 static inline void* nn_malloc_debug(size_t size, const char* file, int line)
