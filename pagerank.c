@@ -6,17 +6,20 @@
 
 typedef struct
 {
-    node* root_node;
-    size_t* update_ptr;
+    node** root_nodes;
+    size_t* outlinks;
+    size_t root_nodes_num;
+
 } outlinks_count_args;
 
-outlinks_count_args* outlinks_count_args_make(node* node, size_t* update_ptr)
+outlinks_count_args* outlinks_count_args_make(node** root_nodes, size_t* outlinks, size_t root_nodes_num)
 {
     outlinks_count_args* args = PR_MALLOC(sizeof(outlinks_count_args));
     *args = (outlinks_count_args)
     {
-        .root_node = node,
-        .update_ptr = update_ptr
+        .root_nodes     = root_nodes,
+        .root_nodes_num = root_nodes_num,
+        .outlinks       = outlinks
     };
     return args;
 }
@@ -24,13 +27,16 @@ void* outlinks_count(void* _args)
 {
     outlinks_count_args* args = _args;
     size_t outlinks = 0;
-    node* node_current = args->root_node;
-    while (node_current != NULL)
+    for (size_t i = 0; i < args->root_nodes_num; ++i)
     {
-        ++outlinks;
-        node_current = node_current->next;
+        node* node_current = args->root_nodes[i];
+        while (node_current != NULL)
+        {
+            ++outlinks;
+            node_current = node_current->next;
+        }
+        args->outlinks[i] = outlinks;
     }
-    *args->update_ptr = outlinks;
     return NULL;
 }
 void compute_outlinks_parallel(Graph* graph, size_t* node_outlinks, size_t node_num, long cores_num)
@@ -47,7 +53,7 @@ void compute_outlinks_parallel(Graph* graph, size_t* node_outlinks, size_t node_
     for (long i = 0; i < node_num; ++i)
     {
         int res = thr_pool_queue(pool, outlinks_count,
-                outlinks_count_args_make(graph->adjacencyLists[i], &node_outlinks[i]));
+                outlinks_count_args_make(&graph->adjacencyLists[i], &node_outlinks[i], 1));
         if (res == -1)
         {
 #ifdef _PR_PRINT
@@ -111,16 +117,28 @@ void fill_arr_parallel(float* arr, size_t arr_len, float value, size_t cores_num
 void perform_iteration(Graph* graph, float* new_pageranks, float* old_pageranks, size_t* outlinks)
 {
     const size_t N = graph->numVertices;
-
+    float page_rank_sum_no_outlinks = 0;
     for (size_t i = 0; i < N; ++i)
     {
-        node* out_link = graph->adjacencyLists[i];
-        while (out_link != NULL)
+        node* outlink = graph->adjacencyLists[i];
+        if (outlink == NULL)
         {
-            new_pageranks[out_link->v] = old_pageranks[out_link->v] + old_pageranks[i] / outlinks[i];
-            out_link = out_link->next;
+            page_rank_sum_no_outlinks += old_pageranks[i] / N;
+        }
+        else
+        {
+            while (outlink != NULL)
+            {
+                new_pageranks[outlink->v] += PR_DAMPING_FACTOR * (old_pageranks[outlink->v] + old_pageranks[i] / outlinks[i]);
+                outlink = outlink->next;
+            }
         }
     }
+    for (size_t i = 0; i < N; ++i)
+    {
+        new_pageranks[i] += PR_DAMPING_FACTOR * (page_rank_sum_no_outlinks);
+    }
+
 }
 
 void PageRank(Graph *graph, int n, float* ranks)
@@ -136,7 +154,7 @@ void PageRank(Graph *graph, int n, float* ranks)
 
     const size_t N          = graph->numVertices;
 
-    fill_arr_parallel(ranks, N, 1.0/N, cores_num);
+    fill_arr_parallel(ranks, N, (1-PR_DAMPING_FACTOR)/N, cores_num);
 
     /*
      * 1. Compute outlinks
@@ -153,13 +171,17 @@ void PageRank(Graph *graph, int n, float* ranks)
         printf("Node %lu has %lu outlinks\n", i, outlinks[i]);
     }
 
-    float* ranks_temp = PR_MALLOC(N * sizeof(float));
+    float* new_ranks = PR_MALLOC(N * sizeof(float));
+    float* ptr_temp;
     for (size_t i = 0; i < n; ++i)
     {
-        perform_iteration(graph, ranks_temp, ranks, outlinks);
+        perform_iteration(graph, new_ranks, ranks, outlinks);
+        ptr_temp = new_ranks;
+        new_ranks = ranks;
+        ranks = ptr_temp;
     }
 
-    free(ranks_temp);
+    free(new_ranks);
     free(outlinks);
 }
 
