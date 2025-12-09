@@ -171,12 +171,9 @@ void update_all_linked_pages(vertex v, node* outlinks_root, size_t outlinks_num,
     {
         while (outlinks_root != NULL)
         {
-            new_pageranks[outlinks_root->v] += PR_DAMPING_FACTOR * (old_pagerank / outlinks_num);
-            do 
-            {
-                outlinks_root = outlinks_root->next;
-            }
-            while (outlinks_root != NULL && outlinks_root->v == v);
+            if (outlinks_root->v != v)
+                new_pageranks[outlinks_root->v] += PR_DAMPING_FACTOR * (old_pagerank / outlinks_num);
+            outlinks_root = outlinks_root->next;
         }
     }
 }
@@ -187,7 +184,7 @@ void perform_iteration(Graph* graph, float* new_pageranks, float* old_pageranks,
     float page_rank_sum_no_outlinks = 0.f;
     for (size_t i = 0; i < N; ++i)
     {
-        update_all_linked_pages((vertex)i, graph->adjacencyLists[i], outlinks[i], old_pageranks[i], &new_pageranks[i], &page_rank_sum_no_outlinks);
+        update_all_linked_pages((vertex)i, graph->adjacencyLists[i], outlinks[i], old_pageranks[i], new_pageranks, &page_rank_sum_no_outlinks);
         new_pageranks[i] += (1-PR_DAMPING_FACTOR)/N;
     }
     for (size_t i = 0; i < N; ++i)
@@ -210,7 +207,7 @@ void PageRank(Graph *graph, int n, float* ranks)
 
     const size_t N          = graph->numVertices;
 
-    fill_arr_parallel(ranks, N, (1-PR_DAMPING_FACTOR)/N, cores_num);
+    fill_arr_parallel(ranks, N, 1.f/N, cores_num);
 
     /*
      * 1. Compute outlinks
@@ -231,6 +228,12 @@ void PageRank(Graph *graph, int n, float* ranks)
     float* ptr_temp = NULL;
     for (size_t i = 0; i < n; ++i)
     {
+        float sum_ranks = 0.f;
+        for (size_t j = 0; j < N; ++j)
+        {
+            sum_ranks += ranks[j];
+        }
+        printf("%lu: sum %.6f\n", i, sum_ranks);
         fill_arr_parallel(new_ranks, N, 0.f, cores_num);
         perform_iteration(graph, new_ranks, ranks, outlinks);
 
